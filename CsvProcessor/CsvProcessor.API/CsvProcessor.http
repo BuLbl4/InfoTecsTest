@@ -1,0 +1,6 @@
+@CsvProcessor_HostAddress = http://localhost:5007
+
+GET {{CsvProcessor_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
