@@ -1,0 +1,32 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: csv_processor_db
+    environment:
+      POSTGRES_DB: CsvProcessorDb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_INITDB_ARGS: "-A scram-sha-256"
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d CsvProcessorDb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - csv_network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  csv_network:
+    driver: bridge

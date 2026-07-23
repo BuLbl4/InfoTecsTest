@@ -18,10 +18,12 @@ public class ValueRecordConfiguration : IEntityTypeConfiguration<ValueRecord>
             .IsRequired();
         
         builder.Property(v => v.ExecutionTime)
-            .IsRequired();
+            .IsRequired()
+            .HasPrecision(18, 6);
         
         builder.Property(v => v.Value)
-            .IsRequired();
+            .IsRequired()
+            .HasPrecision(18, 6);
         
         builder.Property(v => v.RowNumber)
             .IsRequired();
@@ -30,7 +32,10 @@ public class ValueRecordConfiguration : IEntityTypeConfiguration<ValueRecord>
             .IsRequired();
         
         builder.HasIndex(v => new { v.FileName, v.Date })
-            .IsDescending(false, true);
+            .IsDescending(); 
+        
+        builder.HasIndex(v => new { v.FileName, v.RowNumber })
+            .IsUnique();
         
         builder.HasIndex(v => v.ResultId);
         builder.HasIndex(v => v.Date);

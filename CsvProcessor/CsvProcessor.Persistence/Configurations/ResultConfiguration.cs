@@ -10,26 +10,36 @@ public class ResultConfiguration : IEntityTypeConfiguration<Result>
     {
         builder.HasKey(r => r.Id);
         
+        builder.Property(r => r.FileName)
+            .IsRequired()
+            .HasMaxLength(255);
+        
         builder.Property(r => r.DeltaTimeSeconds)
-            .IsRequired();
+            .IsRequired()
+            .HasPrecision(18, 6);
         
         builder.Property(r => r.MinDate)
             .IsRequired();
         
         builder.Property(r => r.AverageExecutionTime)
-            .IsRequired();
+            .IsRequired()
+            .HasPrecision(18, 6);
         
         builder.Property(r => r.AverageValue)
-            .IsRequired();
+            .IsRequired()
+            .HasPrecision(18, 6);
         
         builder.Property(r => r.MedianValue)
-            .IsRequired();
+            .IsRequired()
+            .HasPrecision(18, 6);
         
         builder.Property(r => r.MaxValue)
-            .IsRequired();
+            .IsRequired()
+            .HasPrecision(18, 6);
         
         builder.Property(r => r.MinValue)
-            .IsRequired();
+            .IsRequired()
+            .HasPrecision(18, 6);
         
         builder.Property(r => r.TotalRecords)
             .IsRequired();
@@ -37,6 +47,12 @@ public class ResultConfiguration : IEntityTypeConfiguration<Result>
         builder.Property(r => r.ProcessedAt)
             .IsRequired()
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
+        
+        builder.Property(r => r.FileSize)
+            .IsRequired();
+        
+        builder.HasIndex(r => r.FileName)
+            .IsUnique();
         
         builder.HasIndex(r => r.MinDate);
         builder.HasIndex(r => r.AverageValue);

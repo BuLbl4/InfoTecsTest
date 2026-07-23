@@ -3,6 +3,7 @@ using System;
 using CsvProcessor.Persistence.EfContext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CsvProcessor.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260722195438_FixProps")]
+    partial class FixProps
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -29,41 +32,34 @@ namespace CsvProcessor.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<double>("AverageExecutionTime")
-                        .HasPrecision(18, 6)
                         .HasColumnType("double precision");
 
                     b.Property<double>("AverageValue")
-                        .HasPrecision(18, 6)
                         .HasColumnType("double precision");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<double>("DeltaTimeSeconds")
-                        .HasPrecision(18, 6)
                         .HasColumnType("double precision");
 
                     b.Property<string>("FileName")
                         .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
+                        .HasColumnType("text");
 
-                    b.Property<long>("FileSize")
+                    b.Property<long?>("FileSize")
                         .HasColumnType("bigint");
 
                     b.Property<double>("MaxValue")
-                        .HasPrecision(18, 6)
                         .HasColumnType("double precision");
 
                     b.Property<double>("MedianValue")
-                        .HasPrecision(18, 6)
                         .HasColumnType("double precision");
 
                     b.Property<DateTime>("MinDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<double>("MinValue")
-                        .HasPrecision(18, 6)
                         .HasColumnType("double precision");
 
                     b.Property<DateTime>("ProcessedAt")
@@ -83,9 +79,6 @@ namespace CsvProcessor.Persistence.Migrations
 
                     b.HasIndex("AverageValue");
 
-                    b.HasIndex("FileName")
-                        .IsUnique();
-
                     b.HasIndex("MinDate");
 
                     b.ToTable("Results");
@@ -104,7 +97,6 @@ namespace CsvProcessor.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<double>("ExecutionTime")
-                        .HasPrecision(18, 6)
                         .HasColumnType("double precision");
 
                     b.Property<string>("FileName")
@@ -122,7 +114,6 @@ namespace CsvProcessor.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<double>("Value")
-                        .HasPrecision(18, 6)
                         .HasColumnType("double precision");
 
                     b.HasKey("Id");
@@ -132,10 +123,7 @@ namespace CsvProcessor.Persistence.Migrations
                     b.HasIndex("ResultId");
 
                     b.HasIndex("FileName", "Date")
-                        .IsDescending();
-
-                    b.HasIndex("FileName", "RowNumber")
-                        .IsUnique();
+                        .IsDescending(false, true);
 
                     b.ToTable("ValueRecords");
                 });

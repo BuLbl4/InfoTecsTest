@@ -8,7 +8,8 @@ public static class Entry
 {
     public static void AddInfrastructureLayer(this IServiceCollection services)
     {
-        services.AddScoped<ICsvParser, CsvParser>();
+        services.AddScoped<ICsvParser, CsvParser>()
+            .AddScoped<IStatisticsCalculator, StatisticsCalculator>();
     }
     
 }

@@ -11,6 +11,7 @@ namespace CsvProcessor.Application.Features.ProcessCsv;
 public class ProcessCsvCommandHandler(
     IDbContext context,
     ICsvParser csvParser,
+    IStatisticsCalculator statisticsCalculator,
     ILogger<ProcessCsvCommandHandler> logger)
     : IRequestHandler<ProcessCsvCommand, ProcessCsvResponse>
 {
@@ -24,19 +25,11 @@ public class ProcessCsvCommandHandler(
             await using var stream = request.File.OpenReadStream();
             var (valueRecords, errors) = await csvParser.ParseAsync(stream, fileName, cancellationToken);
 
-            if (errors.Count != 0)
+            if (errors.Count > 0 || valueRecords.Count == 0)
             {
                 response.IsSuccess = false;
                 response.Errors = errors;
-                response.Message = "CSV validation failed";
-                return response;
-            }
-
-            if (valueRecords.Count == 0)
-            {
-                response.IsSuccess = false;
-                response.Message = "CSV validation failed";
-                response.Errors = ["No valid records found in CSV"];
+                response.Message = errors.Count > 0 ? "CSV validation failed" : "No valid records found";
                 return response;
             }
 
@@ -44,35 +37,9 @@ public class ProcessCsvCommandHandler(
 
             try
             {
-                var existingResult = await context.Results
-                    .FirstOrDefaultAsync(r => r.FileName == fileName, cancellationToken);
+                await DeleteExistingData(fileName, cancellationToken);
 
-                if (existingResult != null)
-                {
-                    context.ValueRecords.RemoveRange(
-                        context.ValueRecords.Where(v => v.FileName == fileName));
-                    context.Results.Remove(existingResult);
-                    await context.SaveChangesAsync(cancellationToken);
-                    
-                    logger.LogInformation("Deleted existing data for file: {FileName}", fileName);
-                }
-
-                var stats = CalculateStatistics(valueRecords);
-
-                var result = new Result
-                {
-                    FileName = fileName,
-                    DeltaTimeSeconds = stats.DeltaTimeSeconds,
-                    MinDate = stats.MinDate,
-                    AverageExecutionTime = stats.AverageExecutionTime,
-                    AverageValue = stats.AverageValue,
-                    MedianValue = stats.MedianValue,
-                    MaxValue = stats.MaxValue,
-                    MinValue = stats.MinValue,
-                    TotalRecords = valueRecords.Count,
-                    ProcessedAt = DateTime.UtcNow,
-                    FileSize = request.File.Length
-                };
+                var result = statisticsCalculator.CalculateStatistics(valueRecords, fileName, request.File.Length);
 
                 await context.Results.AddAsync(result, cancellationToken);
                 await context.SaveChangesAsync(cancellationToken);
@@ -82,13 +49,8 @@ public class ProcessCsvCommandHandler(
                     record.ResultId = result.Id;
                 }
 
-                const int batchSize = 1000;
-                for (var i = 0; i < valueRecords.Count; i += batchSize)
-                {
-                    var batch = valueRecords.Skip(i).Take(batchSize);
-                    await context.ValueRecords.AddRangeAsync(batch, cancellationToken);
-                    await context.SaveChangesAsync(cancellationToken);
-                }
+                await context.ValueRecords.AddRangeAsync(valueRecords, cancellationToken);
+                await context.SaveChangesAsync(cancellationToken);
 
                 await transaction.CommitAsync(cancellationToken);
 
@@ -125,49 +87,34 @@ public class ProcessCsvCommandHandler(
         }
     }
 
-    private (double DeltaTimeSeconds, DateTime MinDate, double AverageExecutionTime,
-        double AverageValue, double MedianValue, double MaxValue, double MinValue)
-        CalculateStatistics(List<ValueRecord> records)
+    private async Task DeleteExistingData(string fileName, CancellationToken cancellationToken)
     {
-        var minDate = records.Min(r => r.Date);
-        var maxDate = records.Max(r => r.Date);
-        var deltaTime = (maxDate - minDate).TotalSeconds;
+        var existingResult = await context.Results
+            .FirstOrDefaultAsync(r => r.FileName == fileName, cancellationToken);
 
-        var avgExecutionTime = records.Average(r => r.ExecutionTime);
-        var avgValue = records.Average(r => r.Value);
-
-        var sortedValues = records.Select(r => r.Value).OrderBy(v => v).ToList();
-        var median = CalculateMedian(sortedValues);
-
-        var maxValue = records.Max(r => r.Value);
-        var minValue = records.Min(r => r.Value);
-
-        return (deltaTime, minDate, avgExecutionTime, avgValue, median, maxValue, minValue);
-    }
-
-    private double CalculateMedian(List<double> sortedValues)
-    {
-        var count = sortedValues.Count;
-        if (count % 2 == 1)
-            return sortedValues[count / 2];
-        return (sortedValues[count / 2 - 1] + sortedValues[count / 2]) / 2.0;
+        if (existingResult != null)
+        {
+            context.Results.Remove(existingResult);
+            await context.SaveChangesAsync(cancellationToken);
+            
+            logger.LogInformation("Deleted existing data for file: {FileName}", fileName);
+        }
     }
 
     private ResultDto MapToResultDto(Result result)
     {
-        return new ResultDto
-        {
-            Id = result.Id,
-            FileName = result.FileName,
-            DeltaTimeSeconds = result.DeltaTimeSeconds,
-            MinDate = result.MinDate,
-            AverageExecutionTime = result.AverageExecutionTime,
-            AverageValue = result.AverageValue,
-            MedianValue = result.MedianValue,
-            MaxValue = result.MaxValue,
-            MinValue = result.MinValue,
-            TotalRecords = result.TotalRecords,
-            ProcessedAt = result.ProcessedAt
-        };
+        return new ResultDto(
+            result.Id,
+            result.FileName,
+            result.DeltaTimeSeconds,
+            result.MinDate,
+            result.AverageExecutionTime,
+            result.AverageValue,
+            result.MedianValue,
+            result.MaxValue,
+            result.MinValue,
+            result.TotalRecords,
+            result.ProcessedAt
+        );
     }
 }

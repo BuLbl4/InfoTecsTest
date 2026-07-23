@@ -13,7 +13,7 @@ public class GetFilteredResultsQueryHandler(IDbContext context) :
         var query = context.Results.AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(request.FileName))
-            query = query.Where(r => r.FileName.Contains(request.FileName));
+            query = query.Where(r => EF.Functions.ILike(r.FileName, "%" + request.FileName + "%"));
 
         if (request.MinDateFrom.HasValue)
             query = query.Where(r => r.MinDate >= request.MinDateFrom.Value);
@@ -37,19 +37,17 @@ public class GetFilteredResultsQueryHandler(IDbContext context) :
             .OrderByDescending(r => r.ProcessedAt)
             .ToListAsync(cancellationToken);
 
-        return results.Select(result => new ResultDto
-        {
-            Id = result.Id,
-            FileName = result.FileName,
-            DeltaTimeSeconds = result.DeltaTimeSeconds,
-            MinDate = result.MinDate,
-            AverageExecutionTime = result.AverageExecutionTime,
-            AverageValue = result.AverageValue,
-            MedianValue = result.MedianValue,
-            MaxValue = result.MaxValue,
-            MinValue = result.MinValue,
-            TotalRecords = result.TotalRecords,
-            ProcessedAt = result.ProcessedAt
-        });
+        return results.Select(result => new ResultDto(
+            result.Id,
+            result.FileName,
+            result.DeltaTimeSeconds,
+            result.MinDate,
+            result.AverageExecutionTime,
+            result.AverageValue,
+            result.MedianValue,
+            result.MaxValue,
+            result.MinValue,
+            result.TotalRecords,
+            result.ProcessedAt));
     }
 }
