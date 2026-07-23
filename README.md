@@ -1,1 +1,4 @@
-# InfoTecsTest
+# Для запуска:
+1) запустите компоуз
+2) запустите сервер
+3) перейдите на http://localhost:5007/swagger/index.html
